@@ -29,18 +29,56 @@ install_homebrew() {
     fi
 }
 
+# 检查 Java 是否真正可用
+java_is_available() {
+    # Mac 上即使没装 Java，/usr/bin/java 也存在，但会弹错误
+    # 所以需要检查 JAVA_HOME 或者尝试运行 java -version
+    if [[ "$OS_TYPE" == "mac" ]]; then
+        # 先检查 Homebrew 安装的 Java
+        if command -v brew &> /dev/null; then
+            BREW_PREFIX="$(brew --prefix 2>/dev/null)"
+            if [[ -d "$BREW_PREFIX/opt/openjdk@17" ]]; then
+                export JAVA_HOME="$BREW_PREFIX/opt/openjdk@17"
+                export PATH="$JAVA_HOME/bin:$PATH"
+                return 0
+            fi
+            # 也检查不带版本号的 openjdk
+            if [[ -d "$BREW_PREFIX/opt/openjdk" ]]; then
+                export JAVA_HOME="$BREW_PREFIX/opt/openjdk"
+                export PATH="$JAVA_HOME/bin:$PATH"
+                return 0
+            fi
+        fi
+        # 检查系统 Java（通过 java_home 工具）
+        if /usr/libexec/java_home &> /dev/null; then
+            export JAVA_HOME="$(/usr/libexec/java_home)"
+            return 0
+        fi
+        return 1
+    else
+        command -v java &> /dev/null
+    fi
+}
+
 # 检查并安装 Java
 check_and_install_java() {
-    if ! command -v java &> /dev/null; then
+    if ! java_is_available; then
         echo "☕ 未检测到 Java，正在安装 JDK 17..."
         
         if [[ "$OS_TYPE" == "mac" ]]; then
             install_homebrew
+            echo "📥 安装 OpenJDK 17（可能需要几分钟）..."
             brew install openjdk@17
-            # 创建符号链接
-            sudo ln -sfn $(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk 2>/dev/null
-            export JAVA_HOME=$(brew --prefix)/opt/openjdk@17
+            
+            # 设置环境变量
+            BREW_PREFIX="$(brew --prefix)"
+            export JAVA_HOME="$BREW_PREFIX/opt/openjdk@17"
             export PATH="$JAVA_HOME/bin:$PATH"
+            
+            # 创建符号链接（可能需要密码）
+            echo "🔗 创建系统链接（可能需要输入密码）..."
+            sudo ln -sfn "$BREW_PREFIX/opt/openjdk@17/libexec/openjdk.jdk" /Library/Java/JavaVirtualMachines/openjdk-17.jdk 2>/dev/null || true
+            
         elif [[ "$OS_TYPE" == "linux" ]]; then
             if command -v apt-get &> /dev/null; then
                 sudo apt-get update
@@ -54,9 +92,18 @@ check_and_install_java() {
                 exit 1
             fi
         fi
-        echo "✅ Java 安装完成"
+        
+        # 验证安装
+        if java -version &> /dev/null; then
+            echo "✅ Java 安装完成"
+        else
+            echo "❌ Java 安装失败，请手动安装 JDK 17+"
+            echo "   Mac: brew install openjdk@17"
+            echo "   或访问: https://adoptium.net/"
+            exit 1
+        fi
     else
-        echo "✅ Java 已安装"
+        echo "✅ Java 已安装: $(java -version 2>&1 | head -1)"
     fi
 }
 
