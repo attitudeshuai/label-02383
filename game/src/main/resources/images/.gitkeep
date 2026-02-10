@@ -1,0 +1,3 @@
+# 图片资源目录
+# 运行 ImageGenerator 生成图片：
+# mvn compile exec:java -Dexec.mainClass="com.bubu.game.ImageGenerator"

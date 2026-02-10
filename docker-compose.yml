@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # 布布一二消消乐游戏
+  bubu-game:
+    build:
+      context: ./game
+      dockerfile: Dockerfile
+    container_name: bubu-match3-game
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+    volumes:
+      # Linux/Mac: 挂载 X11 socket
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Windows: 需要使用 VcXsrv 或类似工具
+    network_mode: host
+    stdin_open: true
+    tty: true
+    restart: "no"
+
+# 注意事项：
+# 1. 这是一个 GUI 应用，需要 X11 显示支持
+# 2. Linux: 运行前执行 xhost +local:docker
+# 3. Windows: 需要安装 VcXsrv 并设置 DISPLAY 环境变量
+# 4. Mac: 需要安装 XQuartz 并允许网络连接
+#
+# 推荐直接使用本地 Java 运行：
+# cd game && mvn clean package && java -jar target/bubu-match3-game-1.0.0.jar
