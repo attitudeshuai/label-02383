@@ -154,8 +154,8 @@ public class GamePanel extends JPanel {
     }
 
     private void trySwap(Block a, Block b) {
-        movesLeft--;
         if (board.canSwapAndMatch(a, b)) {
+            movesLeft--;
             board.swapBlocks(a, b);
             repaint();
             
